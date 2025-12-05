@@ -55,18 +55,14 @@ api:
       cpu: "100m"
 
 # Ingress configuration (nginx)
+# All traffic goes to frontend, frontend nginx proxies /api/ to backend
 ingress:
   enabled: true
   className: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-    nginx.ingress.kubernetes.io/use-regex: "true"
+  annotations: {}
   hosts:
     - host: ""  # Empty for IP-based access
       paths:
-        - path: /api(/|$)(.*)
-          pathType: ImplementationSpecific
-          service: api
         - path: /
           pathType: Prefix
           service: frontend
