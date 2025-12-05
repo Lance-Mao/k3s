@@ -7,17 +7,21 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
 
-    outputs:
-      image_tag: ${{ steps.meta.outputs.tags }}
+    strategy:
+      matrix:
+        include:
+          - context: ./frontend
+            image: k3s-frontend
+          - context: ./api
+            image: k3s-api
 
     steps:
       - name: Checkout repository
@@ -34,7 +38,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
             type=sha,prefix=
             type=raw,value=latest
@@ -42,18 +46,23 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ${{ matrix.context }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
   deploy:
-    needs: build-and-push
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.13.0'
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
@@ -66,24 +75,29 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Update deployment image
+      - name: Update Helm values with image info
         run: |
-          # Replace placeholder with actual image
-          sed -i "s|ghcr.io/GITHUB_USERNAME/k3s-demo:latest|${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest|g" k8s/deployment.yaml
+          # Update image repository in values
+          sed -i "s|GITHUB_USERNAME|${{ github.repository_owner }}|g" helm/k3s-app/values.yaml
 
-      - name: Deploy to K3s
+      - name: Deploy with Helm
         run: |
-          kubectl apply -f k8s/deployment.yaml
-          kubectl apply -f k8s/service.yaml
-          kubectl apply -f k8s/ingress.yaml
-
-      - name: Wait for rollout
-        run: |
-          kubectl rollout status deployment/demo-app --timeout=120s
+          helm upgrade --install k3s-app ./helm/k3s-app \
+            --namespace default \
+            --set frontend.image.tag=latest \
+            --set api.image.tag=latest \
+            --set api.env.DEPLOY_COUNT="${{ github.run_number }}" \
+            --wait \
+            --timeout 5m
 
       - name: Verify deployment
         run: |
-          kubectl get pods -l app=demo-app
-          kubectl get svc demo-app
-          kubectl get ingress demo-app
+          kubectl get pods -l app.kubernetes.io/name=k3s-app
+          kubectl get svc
+          kubectl get ingress
 
+      - name: Show deployment info
+        run: |
+          echo "🚀 Deployment complete!"
+          echo "Frontend: http://37.60.228.133"
+          echo "API: http://37.60.228.133/api/"

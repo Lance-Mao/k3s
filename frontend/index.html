@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K3s Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="grain"></div>
+    <div class="gradient-orb orb-1"></div>
+    <div class="gradient-orb orb-2"></div>
+    
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="brand-icon">⎈</span>
+            <span class="brand-text">K3s Deploy</span>
+        </div>
+        <div class="nav-status">
+            <span class="status-dot"></span>
+            <span id="cluster-status">Connecting...</span>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="hero">
+            <h1 class="hero-title">
+                <span class="title-line">Your App is</span>
+                <span class="title-highlight">Live on K3s</span>
+            </h1>
+            <p class="hero-subtitle">Deployed via GitHub Actions CI/CD pipeline</p>
+        </header>
+
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">🚀</div>
+                <div class="stat-content">
+                    <span class="stat-value" id="deploy-count">--</span>
+                    <span class="stat-label">Deployments</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-content">
+                    <span class="stat-value" id="pod-count">--</span>
+                    <span class="stat-label">Running Pods</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⚡</div>
+                <div class="stat-content">
+                    <span class="stat-value" id="uptime">--</span>
+                    <span class="stat-label">Uptime</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🌐</div>
+                <div class="stat-content">
+                    <span class="stat-value" id="version">--</span>
+                    <span class="stat-label">Version</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="api-section">
+            <h2 class="section-title">API Response</h2>
+            <div class="api-card">
+                <div class="api-header">
+                    <span class="api-method">GET</span>
+                    <span class="api-endpoint">/api/</span>
+                    <button class="refresh-btn" onclick="fetchApiData()">
+                        <span class="refresh-icon">↻</span>
+                    </button>
+                </div>
+                <pre class="api-response" id="api-response">Loading...</pre>
+            </div>
+        </section>
+
+        <section class="info-section">
+            <div class="info-card">
+                <h3>🛠️ Stack</h3>
+                <ul class="tech-list">
+                    <li><span class="tech-badge">K3s</span> Lightweight Kubernetes</li>
+                    <li><span class="tech-badge">Helm</span> Package Manager</li>
+                    <li><span class="tech-badge">Nginx</span> Ingress Controller</li>
+                    <li><span class="tech-badge">GitHub Actions</span> CI/CD</li>
+                </ul>
+            </div>
+            <div class="info-card">
+                <h3>📋 Quick Commands</h3>
+                <div class="code-block">
+                    <code>kubectl get pods</code>
+                    <code>helm list</code>
+                    <code>kubectl logs -f deploy/k3s-app</code>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>Built with 💚 • Deployed on <span class="mono">37.60.228.133</span></p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
