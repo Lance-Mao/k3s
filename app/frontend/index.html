@@ -4,107 +4,224 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K3s Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        primary: '#0a0a0f',
+                        secondary: '#12121a',
+                        card: '#16161f',
+                        border: '#2a2a3a',
+                        accent: '#00ff88',
+                        'accent-dim': 'rgba(0, 255, 136, 0.2)',
+                        'accent-purple': '#7c3aed',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Outfit', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        .gradient-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        .orb-1 {
+            width: 600px;
+            height: 600px;
+            background: #00ff88;
+            top: -200px;
+            right: -200px;
+            animation: float 20s ease-in-out infinite;
+        }
+        .orb-2 {
+            width: 400px;
+            height: 400px;
+            background: #7c3aed;
+            bottom: -100px;
+            left: -100px;
+            animation: float 15s ease-in-out infinite reverse;
+        }
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.05); }
+            66% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4); }
+            50% { opacity: 0.8; box-shadow: 0 0 0 8px transparent; }
+        }
+        .status-dot { animation: pulse 2s ease-in-out infinite; }
+        .stat-card:hover {
+            border-color: #00ff88;
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 255, 136, 0.1);
+        }
+    </style>
 </head>
-<body>
-    <div class="grain"></div>
+<body class="bg-primary text-gray-100 min-h-screen overflow-x-hidden relative">
     <div class="gradient-orb orb-1"></div>
     <div class="gradient-orb orb-2"></div>
     
-    <nav class="navbar">
-        <div class="nav-brand">
-            <span class="brand-icon">⎈</span>
-            <span class="brand-text">K3s Deploy</span>
+    <!-- Navbar -->
+    <nav class="fixed top-0 left-0 right-0 flex justify-between items-center px-6 py-4 bg-primary/80 backdrop-blur-xl border-b border-border z-50">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl text-accent">⎈</span>
+            <span class="font-bold text-xl tracking-tight">K3s Deploy</span>
         </div>
-        <div class="nav-status">
-            <span class="status-dot"></span>
+        <div class="flex items-center gap-2 text-sm text-gray-400">
+            <span class="w-2 h-2 bg-accent rounded-full status-dot"></span>
             <span id="cluster-status">Connecting...</span>
         </div>
     </nav>
 
-    <main class="container">
-        <header class="hero">
-            <h1 class="hero-title">
-                <span class="title-line">Your App is</span>
-                <span class="title-highlight">Live on K3s</span>
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto px-6 pt-24 pb-8 relative z-10">
+        <!-- Hero -->
+        <header class="text-center mb-16">
+            <p class="text-gray-500 uppercase tracking-widest text-sm mb-2">Your App is</p>
+            <h1 class="text-5xl md:text-6xl font-bold bg-gradient-to-r from-accent to-green-400 bg-clip-text text-transparent mb-4">
+                Live on K3s
             </h1>
-            <p class="hero-subtitle">Deployed via GitHub Actions CI/CD pipeline</p>
+            <p class="text-gray-400 text-lg">Deployed via GitHub Actions CI/CD pipeline</p>
         </header>
 
-        <section class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon">🚀</div>
-                <div class="stat-content">
-                    <span class="stat-value" id="deploy-count">--</span>
-                    <span class="stat-label">Deployments</span>
+        <!-- Stats Grid -->
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+            <div class="stat-card bg-card border border-border rounded-2xl p-5 flex items-center gap-4 transition-all duration-300">
+                <div class="text-3xl w-14 h-14 flex items-center justify-center bg-secondary rounded-xl">🚀</div>
+                <div>
+                    <div class="font-mono text-2xl font-semibold text-accent" id="deploy-count">--</div>
+                    <div class="text-sm text-gray-500">Deployments</div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon">📦</div>
-                <div class="stat-content">
-                    <span class="stat-value" id="pod-count">--</span>
-                    <span class="stat-label">Running Pods</span>
+            <div class="stat-card bg-card border border-border rounded-2xl p-5 flex items-center gap-4 transition-all duration-300">
+                <div class="text-3xl w-14 h-14 flex items-center justify-center bg-secondary rounded-xl">📦</div>
+                <div>
+                    <div class="font-mono text-2xl font-semibold text-accent" id="pod-count">--</div>
+                    <div class="text-sm text-gray-500">Running Pods</div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon">⚡</div>
-                <div class="stat-content">
-                    <span class="stat-value" id="uptime">--</span>
-                    <span class="stat-label">Uptime</span>
+            <div class="stat-card bg-card border border-border rounded-2xl p-5 flex items-center gap-4 transition-all duration-300">
+                <div class="text-3xl w-14 h-14 flex items-center justify-center bg-secondary rounded-xl">⚡</div>
+                <div>
+                    <div class="font-mono text-2xl font-semibold text-accent" id="uptime">--</div>
+                    <div class="text-sm text-gray-500">Uptime</div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon">🌐</div>
-                <div class="stat-content">
-                    <span class="stat-value" id="version">--</span>
-                    <span class="stat-label">Version</span>
+            <div class="stat-card bg-card border border-border rounded-2xl p-5 flex items-center gap-4 transition-all duration-300">
+                <div class="text-3xl w-14 h-14 flex items-center justify-center bg-secondary rounded-xl">🌐</div>
+                <div>
+                    <div class="font-mono text-2xl font-semibold text-accent" id="version">--</div>
+                    <div class="text-sm text-gray-500">Version</div>
                 </div>
             </div>
         </section>
 
-        <section class="api-section">
-            <h2 class="section-title">API Response</h2>
-            <div class="api-card">
-                <div class="api-header">
-                    <span class="api-method">GET</span>
-                    <span class="api-endpoint">/api/</span>
-                    <button class="refresh-btn" onclick="fetchApiData()">
-                        <span class="refresh-icon">↻</span>
+        <!-- API Section -->
+        <section class="mb-12">
+            <h2 class="text-lg font-semibold text-gray-400 mb-4">API Response</h2>
+            <div class="bg-card border border-border rounded-2xl overflow-hidden">
+                <div class="flex items-center gap-4 px-5 py-3 bg-secondary border-b border-border">
+                    <span class="bg-accent text-primary px-3 py-1 rounded-md font-mono text-xs font-semibold">GET</span>
+                    <span class="font-mono text-gray-400 flex-1">/api/</span>
+                    <button onclick="fetchApiData()" class="w-9 h-9 flex items-center justify-center border border-border rounded-lg hover:border-accent hover:text-accent transition-colors text-gray-400">
+                        <span class="text-xl">↻</span>
                     </button>
                 </div>
-                <pre class="api-response" id="api-response">Loading...</pre>
+                <pre class="font-mono text-sm p-5 text-accent overflow-x-auto" id="api-response">Loading...</pre>
             </div>
         </section>
 
-        <section class="info-section">
-            <div class="info-card">
-                <h3>🛠️ Stack</h3>
-                <ul class="tech-list">
-                    <li><span class="tech-badge">K3s</span> Lightweight Kubernetes</li>
-                    <li><span class="tech-badge">Helm</span> Package Manager</li>
-                    <li><span class="tech-badge">Nginx</span> Ingress Controller</li>
-                    <li><span class="tech-badge">GitHub Actions</span> CI/CD</li>
+        <!-- Info Section -->
+        <section class="grid md:grid-cols-2 gap-6 mb-12">
+            <div class="bg-card border border-border rounded-2xl p-6">
+                <h3 class="font-semibold mb-4">🛠️ Stack</h3>
+                <ul class="space-y-3">
+                    <li class="flex items-center gap-3 text-sm text-gray-400">
+                        <span class="bg-accent-dim text-accent px-2 py-1 rounded font-mono text-xs font-semibold">K3s</span>
+                        Lightweight Kubernetes
+                    </li>
+                    <li class="flex items-center gap-3 text-sm text-gray-400">
+                        <span class="bg-accent-dim text-accent px-2 py-1 rounded font-mono text-xs font-semibold">Helm</span>
+                        Package Manager
+                    </li>
+                    <li class="flex items-center gap-3 text-sm text-gray-400">
+                        <span class="bg-accent-dim text-accent px-2 py-1 rounded font-mono text-xs font-semibold">Nginx</span>
+                        Ingress Controller
+                    </li>
+                    <li class="flex items-center gap-3 text-sm text-gray-400">
+                        <span class="bg-accent-dim text-accent px-2 py-1 rounded font-mono text-xs font-semibold">GitHub Actions</span>
+                        CI/CD
+                    </li>
                 </ul>
             </div>
-            <div class="info-card">
-                <h3>📋 Quick Commands</h3>
-                <div class="code-block">
-                    <code>kubectl get pods</code>
-                    <code>helm list</code>
-                    <code>kubectl logs -f deploy/k3s-app</code>
+            <div class="bg-card border border-border rounded-2xl p-6">
+                <h3 class="font-semibold mb-4">📋 Quick Commands</h3>
+                <div class="space-y-2">
+                    <code class="block font-mono text-xs bg-secondary px-4 py-3 rounded-lg text-gray-400 border border-border">kubectl get pods</code>
+                    <code class="block font-mono text-xs bg-secondary px-4 py-3 rounded-lg text-gray-400 border border-border">helm list</code>
+                    <code class="block font-mono text-xs bg-secondary px-4 py-3 rounded-lg text-gray-400 border border-border">kubectl logs -f deploy/k3s-app</code>
                 </div>
             </div>
         </section>
     </main>
 
-    <footer class="footer">
-        <p>Built with 💚 • Deployed on <span class="mono">37.60.228.133</span></p>
+    <!-- Footer -->
+    <footer class="text-center py-6 text-gray-500 text-sm border-t border-border">
+        <p>Built with 💚 • Deployed on <span class="font-mono text-accent">37.60.228.133</span></p>
     </footer>
 
-    <script src="app.js"></script>
+    <script>
+        const API_BASE = '/api';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchApiData();
+            // Refresh data every 5 seconds to update uptime
+            setInterval(fetchApiData, 5000);
+            setTimeout(() => {
+                document.getElementById('cluster-status').textContent = 'Connected to K3s';
+            }, 1500);
+        });
+
+        async function fetchApiData() {
+            const responseEl = document.getElementById('api-response');
+            try {
+                const response = await fetch(API_BASE + '/');
+                const data = await response.json();
+                responseEl.textContent = JSON.stringify(data, null, 2);
+                document.getElementById('version').textContent = data.version || 'v1.0.0';
+                document.getElementById('deploy-count').textContent = data.deploy_count || '1';
+                document.getElementById('pod-count').textContent = data.replicas || '2';
+                document.getElementById('uptime').textContent = data.uptime || '--';
+            } catch (error) {
+                responseEl.textContent = JSON.stringify({
+                    message: "Hello from K3s! 🚀",
+                    version: "1.0.0",
+                    timestamp: new Date().toISOString(),
+                    hostname: "k3s-app-xxxxx",
+                    note: "API endpoint: /api/"
+                }, null, 2);
+                document.getElementById('version').textContent = 'v1.0.0';
+                document.getElementById('deploy-count').textContent = '1';
+                document.getElementById('pod-count').textContent = '2';
+                document.getElementById('uptime').textContent = '--';
+            }
+        }
+    </script>
 </body>
 </html>
-
