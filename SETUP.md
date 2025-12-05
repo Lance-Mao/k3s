@@ -356,6 +356,78 @@ The API exposes Prometheus metrics at `/api/metrics`:
 
 ---
 
+## Loki (Log Aggregation)
+
+### Install Loki
+
+```bash
+# Add Grafana helm repo
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+# Install Loki stack
+helm install loki grafana/loki-stack \
+  --namespace monitoring \
+  --set loki.auth_enabled=false \
+  --set grafana.enabled=false \
+  --set promtail.enabled=true
+
+# Wait for Loki to be ready
+kubectl wait --for=condition=ready pod -l app=loki -n monitoring --timeout=300s
+```
+
+### Add Loki to Grafana
+
+**Option 1: Via UI**
+1. Go to Grafana → **Connections** → **Data sources**
+2. Click **+ Add new data source**
+3. Select **Loki**
+4. URL: `http://loki.monitoring:3100`
+5. Click **Save & test**
+
+**Option 2: Via API**
+```bash
+curl -X POST "http://admin:admin123@YOUR_IP:30030/api/datasources" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Loki",
+    "type": "loki",
+    "url": "http://loki.monitoring:3100",
+    "access": "proxy"
+  }'
+```
+
+### Query Logs in Grafana
+
+1. Go to **Explore** → Select **Loki**
+2. Example queries:
+
+```logql
+# All logs from your app
+{namespace="default"}
+
+# API logs only
+{namespace="default", app="k3s-app-api"}
+
+# Frontend logs
+{namespace="default", app="k3s-app-frontend"}
+
+# Search for errors
+{namespace="default"} |= "error"
+```
+
+### Verify Loki is Working
+
+```bash
+# Check pods
+kubectl get pods -n monitoring | grep loki
+
+# Test Loki endpoint
+kubectl exec -n monitoring loki-0 -- wget -qO- http://localhost:3100/ready
+```
+
+---
+
 ## Quick Reference
 
 | Action | Command |
@@ -367,3 +439,4 @@ The API exposes Prometheus metrics at `/api/metrics`:
 | Uninstall | `helm uninstall k3s-app` |
 | Grafana | `http://YOUR_IP:30030` |
 | Prometheus | `http://YOUR_IP:30090` |
+| Loki Logs | Grafana → Explore → Loki |
