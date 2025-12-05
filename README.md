@@ -2,6 +2,7 @@
 
 A complete Kubernetes deployment setup with automated CI/CD using GitHub Actions, Helm, and full observability stack.
 
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![K3s](https://img.shields.io/badge/K3s-FFC61C?style=for-the-badge&logo=k3s&logoColor=black)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white)
 ![Helm](https://img.shields.io/badge/Helm-0F1689?style=for-the-badge&logo=helm&logoColor=white)
