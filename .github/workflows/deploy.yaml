@@ -84,7 +84,11 @@ jobs:
       - name: Update Helm values with image info
         run: |
           # Update image repository in values (lowercase)
-          sed -i "s|GITHUB_USERNAME|${OWNER_LC}|g" helm/k3s-app/values.yaml
+          sed -i "s|dfanso|${OWNER_LC}|g" helm/k3s-app/values.yaml
+
+      - name: Build Helm dependencies
+        run: |
+          helm dependency update ./helm/k3s-app
 
       - name: Deploy with Helm
         run: |
@@ -94,16 +98,22 @@ jobs:
             --set api.image.tag=latest \
             --set api.env.DEPLOY_COUNT="${{ github.run_number }}" \
             --wait \
-            --timeout 5m
+            --timeout 10m
 
       - name: Verify deployment
         run: |
-          kubectl get pods -l app.kubernetes.io/name=k3s-app
+          echo "📦 Pods:"
+          kubectl get pods
+          echo ""
+          echo "🔌 Services:"
           kubectl get svc
+          echo ""
+          echo "🌐 Ingress:"
           kubectl get ingress
 
       - name: Show deployment info
         run: |
+          EXTERNAL_IP=$(kubectl get svc k3s-app-ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "pending")
           echo "🚀 Deployment complete!"
-          echo "Frontend: http://37.60.228.133"
-          echo "API: http://37.60.228.133/api/"
+          echo "Frontend: http://${EXTERNAL_IP}/"
+          echo "API: http://${EXTERNAL_IP}/api/"

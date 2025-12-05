@@ -59,16 +59,17 @@ ingress:
   enabled: true
   className: nginx
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
   hosts:
     - host: ""  # Empty for IP-based access
       paths:
+        - path: /api(/|$)(.*)
+          pathType: ImplementationSpecific
+          service: api
         - path: /
           pathType: Prefix
           service: frontend
-        - path: /api
-          pathType: Prefix
-          service: api
   tls: []
 
 # Pod disruption budget
@@ -82,4 +83,15 @@ autoscaling:
   minReplicas: 2
   maxReplicas: 10
   targetCPUUtilizationPercentage: 80
+
+# Nginx Ingress Controller (as dependency)
+ingress-nginx:
+  enabled: true
+  controller:
+    service:
+      type: LoadBalancer
+    ingressClassResource:
+      name: nginx
+      enabled: true
+      default: true
 

@@ -1,127 +1,112 @@
-# K3s CI/CD Setup with Helm & Nginx Ingress
+# K3s CI/CD Setup Guide
+
+Complete guide to deploy apps on K3s with GitHub Actions and Helm.
+
+**Everything is automated!** Just run the setup script on your VPS and push code.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Your VPS (K3s)                       │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │              Nginx Ingress Controller            │   │
-│  │                   (Port 80/443)                  │   │
-│  └─────────────────┬───────────────────────────────┘   │
-│                    │                                    │
-│         ┌─────────┴──────────┐                         │
-│         │                    │                         │
-│         ▼                    ▼                         │
-│  ┌──────────────┐    ┌──────────────┐                 │
-│  │   Frontend   │    │     API      │                 │
-│  │   (Nginx)    │───▶│  (FastAPI)   │                 │
-│  │   Port 80    │    │  Port 8000   │                 │
-│  └──────────────┘    └──────────────┘                 │
-│       /                    /api/                       │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      Your VPS (K3s)                         │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │     Nginx Ingress Controller (auto-installed by Helm) │  │
+│  └─────────────────────┬─────────────────────────────────┘  │
+│                        │                                     │
+│         ┌──────────────┴──────────────┐                     │
+│         │ /                           │ /api/*              │
+│         ▼                             ▼                     │
+│  ┌──────────────┐              ┌──────────────┐            │
+│  │   Frontend   │              │     API      │            │
+│  │   (Nginx)    │              │  (FastAPI)   │            │
+│  └──────────────┘              └──────────────┘            │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Step 1: Install Nginx Ingress Controller (on VPS)
+## Quick Start (3 Steps)
+
+### Step 1: Setup VPS
 
 SSH into your VPS and run:
 
 ```bash
-# Remove default Traefik (comes with k3s)
-kubectl delete helmchart traefik traefik-crd -n kube-system 2>/dev/null || true
-
-# Install Nginx Ingress via Helm
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-helm repo update
-
-helm install ingress-nginx ingress-nginx/ingress-nginx \
-  --namespace ingress-nginx \
-  --create-namespace \
-  --set controller.service.type=LoadBalancer \
-  --set controller.publishService.enabled=true
+# Download and run setup script
+curl -O https://raw.githubusercontent.com/YOUR_USERNAME/k3s/main/scripts/setup-k3s.sh
+chmod +x setup-k3s.sh
+sudo ./setup-k3s.sh
 ```
 
-Verify it's running:
+The script will:
+- ✅ Install K3s (without traefik)
+- ✅ Configure kubectl
+- ✅ Open firewall ports
+- ✅ Generate kubeconfig for GitHub Actions
+
+**Copy the KUBECONFIG value** shown at the end.
+
+### Step 2: Add GitHub Secret
+
+1. Go to your repo → **Settings** → **Secrets and variables** → **Actions**
+2. Click **New repository secret**
+3. Name: `KUBECONFIG`
+4. Value: Paste the base64 value from Step 1
+5. Click **Add secret**
+
+### Step 3: Push Code
+
 ```bash
-kubectl get pods -n ingress-nginx
-kubectl get svc -n ingress-nginx
+git add .
+git commit -m "Deploy to K3s"
+git push
 ```
+
+**That's it!** GitHub Actions will:
+1. Build Docker images
+2. Push to GitHub Container Registry
+3. Install nginx-ingress (via Helm dependency)
+4. Deploy your app
 
 ---
 
-## Step 2: Get Kubeconfig
+## After First Deploy: Make Packages Public
 
-On your VPS:
+GitHub creates container packages as **private** by default. K3s needs them public.
 
-```bash
-# Get kubeconfig with external IP
-sudo cat /etc/rancher/k3s/k3s.yaml | sed 's/127.0.0.1/37.60.228.133/g' | base64 -w 0
-```
+1. Go to `https://github.com/YOUR_USERNAME?tab=packages`
+2. Click each package (`k3s-frontend`, `k3s-api`)
+3. **Package settings** → **Danger Zone** → **Change visibility** → **Public**
 
-Copy the entire output.
+Then re-run the GitHub Action or push again.
 
 ---
 
-## Step 3: Open Firewall Ports
+## Manual VPS Setup (Alternative)
+
+If you prefer manual setup instead of the script:
 
 ```bash
-# Kubernetes API
-sudo ufw allow 6443/tcp
+# Update system
+sudo apt update && sudo apt upgrade -y
 
-# HTTP/HTTPS
+# Install K3s without traefik
+curl -sfL https://get.k3s.io | sh -s - --disable traefik
+
+# Setup kubectl
+mkdir -p ~/.kube
+sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+sudo chown $(id -u):$(id -g) ~/.kube/config
+export KUBECONFIG=~/.kube/config
+
+# Open firewall
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
+sudo ufw allow 6443/tcp
 
-# Reload
-sudo ufw reload
+# Get kubeconfig for GitHub (replace YOUR_VPS_IP)
+sudo cat /etc/rancher/k3s/k3s.yaml | sed 's/127.0.0.1/YOUR_VPS_IP/g' | base64 -w 0
 ```
-
----
-
-## Step 4: Add GitHub Secret
-
-Go to your GitHub repository:
-**Settings** → **Secrets and variables** → **Actions** → **New repository secret**
-
-| Name | Value |
-|------|-------|
-| `KUBECONFIG` | The base64 encoded kubeconfig from Step 2 |
-
----
-
-## Step 5: Push to GitHub
-
-```bash
-cd F:\Git\k3s
-
-# Initialize git
-git init
-git add .
-git commit -m "Initial: K3s app with Helm, Nginx, Frontend"
-
-# Add remote (replace YOUR_USERNAME)
-git remote add origin https://github.com/YOUR_USERNAME/k3s.git
-git branch -M main
-git push -u origin main
-```
-
----
-
-## Step 6: Verify Deployment
-
-After the GitHub Action completes:
-
-```bash
-# On your VPS
-kubectl get pods
-kubectl get svc
-kubectl get ingress
-helm list
-```
-
-Visit: **http://37.60.228.133**
 
 ---
 
@@ -129,106 +114,115 @@ Visit: **http://37.60.228.133**
 
 ```
 k3s/
-├── .github/
-│   └── workflows/
-│       └── deploy.yaml          # CI/CD pipeline
+├── .github/workflows/deploy.yaml    # CI/CD pipeline
 ├── app/
-│   ├── api/
-│   │   ├── Dockerfile           # API container
-│   │   ├── main.py              # FastAPI app
+│   ├── api/                         # FastAPI backend
+│   │   ├── Dockerfile
+│   │   ├── main.py
 │   │   └── requirements.txt
-│   └── frontend/
-│       ├── Dockerfile           # Frontend container
-│       ├── nginx.conf           # Nginx config
-│       ├── index.html           # Dashboard
-│       ├── styles.css           # Styles
-│       └── app.js               # JavaScript
-├── helm/
-│   └── k3s-app/
-│       ├── Chart.yaml           # Helm chart metadata
-│       ├── values.yaml          # Configuration values
-│       └── templates/
-│           ├── _helpers.tpl     # Template helpers
-│           ├── frontend-deployment.yaml
-│           ├── frontend-service.yaml
-│           ├── api-deployment.yaml
-│           ├── api-service.yaml
-│           └── ingress.yaml
-├── SETUP.md                     # This file
-└── .gitignore
+│   └── frontend/                    # Nginx frontend
+│       ├── Dockerfile
+│       ├── nginx.conf
+│       ├── index.html
+│       ├── styles.css
+│       └── app.js
+├── helm/k3s-app/
+│   ├── Chart.yaml                   # Includes nginx-ingress dependency
+│   ├── values.yaml                  # Configuration
+│   └── templates/                   # K8s manifests
+├── scripts/
+│   └── setup-k3s.sh                 # VPS setup script
+└── SETUP.md
+```
+
+---
+
+## Configuration
+
+### Change Replicas
+
+Edit `helm/k3s-app/values.yaml`:
+
+```yaml
+frontend:
+  replicaCount: 3  # Change this
+
+api:
+  replicaCount: 3  # Change this
+```
+
+### Disable Nginx Ingress (if already installed)
+
+```yaml
+ingress-nginx:
+  enabled: false
+```
+
+### Add Environment Variables
+
+```yaml
+api:
+  env:
+    MY_VAR: "my-value"
+    DATABASE_URL: "postgres://..."
 ```
 
 ---
 
 ## Useful Commands
 
-### Helm
 ```bash
-# List releases
+# Check pods
+kubectl get pods
+
+# Check logs
+kubectl logs -f deployment/k3s-app-api
+
+# Restart deployment
+kubectl rollout restart deployment/k3s-app-frontend
+
+# Check ingress
+kubectl get ingress
+
+# Helm status
 helm list
-
-# Upgrade deployment
-helm upgrade k3s-app ./helm/k3s-app
-
-# Rollback
-helm rollback k3s-app 1
+helm get values k3s-app
 
 # Uninstall
 helm uninstall k3s-app
-
-# Show values
-helm get values k3s-app
-```
-
-### Kubernetes
-```bash
-# Watch pods
-kubectl get pods -w
-
-# View logs
-kubectl logs -f deployment/k3s-app-frontend
-kubectl logs -f deployment/k3s-app-api
-
-# Describe resources
-kubectl describe ingress k3s-app
-
-# Port forward for debugging
-kubectl port-forward svc/k3s-app-api 8000:8000
 ```
 
 ---
 
 ## Troubleshooting
 
-### Nginx Ingress not responding
-```bash
-# Check ingress controller
-kubectl get pods -n ingress-nginx
-kubectl logs -n ingress-nginx deployment/ingress-nginx-controller
-```
+### ImagePullBackOff
+**Cause:** Packages are private
+**Fix:** Make packages public on GitHub (see above)
 
-### Image pull errors
-- Ensure GitHub Container Registry is public, or add imagePullSecrets
-- Check image names in `helm/k3s-app/values.yaml`
+### Pods Pending
+**Cause:** Waiting for resources or dependencies
+**Fix:** Wait a few minutes, check `kubectl describe pod <name>`
 
-### 502 Bad Gateway
-```bash
-# Check if backend pods are running
-kubectl get pods
-kubectl logs deployment/k3s-app-api
-```
+### 404 on /api/
+**Cause:** Ingress not configured correctly
+**Fix:** Check ingress: `kubectl describe ingress k3s-app`
+
+### Connection Refused
+**Cause:** Firewall blocking ports
+**Fix:** `sudo ufw allow 80/tcp && sudo ufw allow 6443/tcp`
 
 ---
 
 ## SSL/TLS (Optional)
 
-To add Let's Encrypt SSL:
+Add cert-manager for automatic Let's Encrypt certificates:
 
 ```bash
 # Install cert-manager
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
 
-# Create ClusterIssuer (save as cluster-issuer.yaml)
+# Create issuer
 cat <<EOF | kubectl apply -f -
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -247,7 +241,8 @@ spec:
 EOF
 ```
 
-Then update `helm/k3s-app/values.yaml`:
+Then update `values.yaml`:
+
 ```yaml
 ingress:
   annotations:
@@ -255,6 +250,9 @@ ingress:
   hosts:
     - host: yourdomain.com
       paths:
+        - path: /api(/|$)(.*)
+          pathType: ImplementationSpecific
+          service: api
         - path: /
           pathType: Prefix
           service: frontend
@@ -263,3 +261,15 @@ ingress:
       hosts:
         - yourdomain.com
 ```
+
+---
+
+## Quick Reference
+
+| Action | Command |
+|--------|---------|
+| Deploy | `git push` |
+| Check status | `kubectl get pods` |
+| View logs | `kubectl logs -f deploy/k3s-app-api` |
+| Restart | `kubectl rollout restart deploy/k3s-app-api` |
+| Uninstall | `helm uninstall k3s-app` |
