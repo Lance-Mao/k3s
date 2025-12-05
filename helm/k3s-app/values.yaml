@@ -92,3 +92,73 @@ ingress-nginx:
       enabled: true
       default: true
 
+# Monitoring Stack (Prometheus + Grafana)
+monitoring:
+  enabled: true
+
+kube-prometheus-stack:
+  # Grafana configuration
+  grafana:
+    enabled: true
+    adminPassword: "admin123"  # Change this!
+    service:
+      type: NodePort
+      nodePort: 30030
+    ingress:
+      enabled: false
+    persistence:
+      enabled: false
+    dashboardProviders:
+      dashboardproviders.yaml:
+        apiVersion: 1
+        providers:
+          - name: 'default'
+            folder: ''
+            type: file
+            disableDeletion: false
+            editable: true
+            options:
+              path: /var/lib/grafana/dashboards/default
+  
+  # Prometheus configuration
+  prometheus:
+    enabled: true
+    prometheusSpec:
+      retention: 7d
+      resources:
+        requests:
+          memory: 256Mi
+          cpu: 100m
+        limits:
+          memory: 512Mi
+          cpu: 500m
+      storageSpec: {}
+    service:
+      type: NodePort
+      nodePort: 30090
+  
+  # AlertManager
+  alertmanager:
+    enabled: true
+    service:
+      type: NodePort
+      nodePort: 30093
+  
+  # Disable components not needed for small clusters
+  kubeEtcd:
+    enabled: false
+  kubeControllerManager:
+    enabled: false
+  kubeScheduler:
+    enabled: false
+  kubeProxy:
+    enabled: false
+  
+  # Node exporter for system metrics
+  nodeExporter:
+    enabled: true
+  
+  # Kube-state-metrics for K8s metrics
+  kubeStateMetrics:
+    enabled: true
+

@@ -1,12 +1,13 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import os
 
 app = FastAPI(title="K3s Demo API")
 
-# Track pod start time
+# Track pod start time and request count
 START_TIME = datetime.now()
+REQUEST_COUNT = 0
 
 # CORS
 app.add_middleware(
@@ -38,6 +39,8 @@ def get_uptime():
 
 @app.get("/")
 def root():
+    global REQUEST_COUNT
+    REQUEST_COUNT += 1
     return {
         "message": "Hello from K3s! 🚀",
         "version": os.getenv("APP_VERSION", "1.0.0"),
@@ -47,8 +50,27 @@ def root():
         "deploy_count": os.getenv("DEPLOY_COUNT", "1"),
         "environment": os.getenv("ENVIRONMENT", "production"),
         "uptime": get_uptime(),
-        "started_at": START_TIME.isoformat()
+        "started_at": START_TIME.isoformat(),
+        "request_count": REQUEST_COUNT
     }
+
+@app.get("/metrics")
+def metrics():
+    """Prometheus metrics endpoint"""
+    uptime_seconds = (datetime.now() - START_TIME).total_seconds()
+    metrics_text = f"""# HELP k3s_app_uptime_seconds Time since pod started
+# TYPE k3s_app_uptime_seconds gauge
+k3s_app_uptime_seconds {uptime_seconds}
+
+# HELP k3s_app_requests_total Total number of requests
+# TYPE k3s_app_requests_total counter
+k3s_app_requests_total {REQUEST_COUNT}
+
+# HELP k3s_app_info Application info
+# TYPE k3s_app_info gauge
+k3s_app_info{{version="{os.getenv("APP_VERSION", "1.0.0")}",hostname="{os.getenv("HOSTNAME", "unknown")}"}} 1
+"""
+    return Response(content=metrics_text, media_type="text/plain")
 
 @app.get("/health")
 def health():
