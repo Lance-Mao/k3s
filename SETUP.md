@@ -33,7 +33,7 @@ SSH into your VPS and run:
 
 ```bash
 # Download and run setup script
-curl -O https://raw.githubusercontent.com/YOUR_USERNAME/k3s/main/scripts/setup-k3s.sh
+curl -O https://raw.githubusercontent.com/dfanso/k3s/main/scripts/setup-k3s.sh
 chmod +x setup-k3s.sh
 sudo ./setup-k3s.sh
 ```
@@ -75,7 +75,7 @@ git push
 
 GitHub creates container packages as **private** by default. K3s needs them public.
 
-1. Go to `https://github.com/YOUR_USERNAME?tab=packages`
+1. Go to `https://github.com/dfanso?tab=packages`
 2. Click each package (`k3s-frontend`, `k3s-api`)
 3. **Package settings** → **Danger Zone** → **Change visibility** → **Public**
 
