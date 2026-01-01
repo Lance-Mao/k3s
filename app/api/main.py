@@ -43,7 +43,7 @@ def root():
     REQUEST_COUNT += 1
     return {
         "message": "Hello from K3s! 🚀",
-        "version": os.getenv("APP_VERSION", "1.0.0"),
+        "version": os.getenv("APP_VERSION", "1.0.1"),
         "timestamp": datetime.now().isoformat(),
         "hostname": os.getenv("HOSTNAME", "unknown"),
         "replicas": os.getenv("REPLICAS", "2"),
